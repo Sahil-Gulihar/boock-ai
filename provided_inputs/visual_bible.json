@@ -1,0 +1,37 @@
+{
+  "visual_bible_id": "visual_bible_demo_v001",
+  "style": {
+    "style_route": "grounded_mythic_cinematic",
+    "palette": ["wet slate", "cold blue-gray", "ember gold", "black obsidian"],
+    "lighting": "soft cinematic contrast, rain reflections, readable faces",
+    "negative_style": [
+      "plastic armor",
+      "anime style",
+      "celebrity likeness",
+      "inconsistent hair",
+      "extra fingers",
+      "different costume between scenes"
+    ]
+  },
+  "characters": {
+    "mira": {
+      "appearance": "young archivist, dark curly shoulder-length hair, warm brown skin, focused eyes",
+      "costume": "deep green travel cloak with brass clasp, rain-darkened fabric",
+      "must_not_change": ["hair color", "cloak color", "brass clasp"]
+    },
+    "arin": {
+      "appearance": "young guard, short black hair, olive skin, scar over right brow, guarded expression",
+      "costume": "dark leather guard jacket, wet shoulder straps",
+      "must_not_change": ["right-brow scar", "leather guard jacket"]
+    }
+  },
+  "location": {
+    "location_id": "ruined_watchtower",
+    "identity_markers": [
+      "broken stone arch",
+      "rain puddles",
+      "fallen shield half-buried in mud",
+      "cold blue-gray night"
+    ]
+  }
+}

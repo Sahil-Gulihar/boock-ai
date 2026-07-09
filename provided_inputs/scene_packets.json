@@ -1,0 +1,30 @@
+{
+  "scenes": [
+    {
+      "scene_id": "scene_001_mira_closeup",
+      "shot_type": "medium close-up",
+      "characters": ["mira"],
+      "props": [],
+      "location_id": "ruined_watchtower",
+      "prompt_intent": "Mira stands under the broken arch in rain, realizing something is wrong. Her green cloak and brass clasp are clearly visible.",
+      "emotion": "suspenseful, controlled fear",
+      "required_refs": [
+        {"entity_type": "character", "entity_id": "mira", "view_preference": "face_front_close"}
+      ]
+    },
+    {
+      "scene_id": "scene_002_two_shot",
+      "shot_type": "two shot",
+      "characters": ["mira", "arin"],
+      "props": ["black_seal"],
+      "location_id": "ruined_watchtower",
+      "prompt_intent": "Mira confronts Arin in the ruined watchtower. Arin hides the black seal in his hand. Rain reflects the blue glow on wet stone.",
+      "emotion": "tense, cinematic, restrained betrayal",
+      "required_refs": [
+        {"entity_type": "character", "entity_id": "mira", "view_preference": "fullbody_three_quarter"},
+        {"entity_type": "character", "entity_id": "arin", "view_preference": "fullbody_three_quarter"},
+        {"entity_type": "prop", "entity_id": "black_seal", "view_preference": "prop_in_hand"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "book_version_id": "boock_demo_visual_001",
+  "variant_id": "variant_cinematic_default",
+  "reference_pack_id": "refpack_demo_v001",
+  "entities": [
+    {
+      "entity_type": "character",
+      "entity_id": "mira",
+      "display_name": "Mira",
+      "reference_assets": [
+        {
+          "asset_id": "mira_face_ref",
+          "path": "provided_inputs/reference_assets/mira_face_ref.png",
+          "role": "identity_ref",
+          "required": true
+        }
+      ],
+      "preserve_facets": ["face_identity", "hair_color", "skin_tone", "core_silhouette"],
+      "editable_facets": ["pose", "lighting", "camera_angle", "weather_effects"]
+    },
+    {
+      "entity_type": "character",
+      "entity_id": "arin",
+      "display_name": "Arin",
+      "reference_assets": [
+        {
+          "asset_id": "arin_face_ref",
+          "path": "provided_inputs/reference_assets/arin_face_ref.png",
+          "role": "identity_ref",
+          "required": true
+        }
+      ],
+      "preserve_facets": ["face_identity", "hair_shape", "scar_over_right_brow", "guard_leather_silhouette"],
+      "editable_facets": ["pose", "lighting", "camera_angle", "rain"]
+    },
+    {
+      "entity_type": "prop",
+      "entity_id": "black_seal",
+      "display_name": "Black Seal",
+      "reference_assets": [
+        {
+          "asset_id": "black_seal_ref",
+          "path": "provided_inputs/reference_assets/black_seal_ref.png",
+          "role": "prop_ref",
+          "required": true
+        }
+      ],
+      "preserve_facets": ["round_shape", "black_obsidian_material", "thin_blue_glow", "engraved_rune"],
+      "editable_facets": ["hand_position", "lighting", "scale"]
+    }
+  ]
+}

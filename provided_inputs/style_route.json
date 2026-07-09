@@ -1,0 +1,7 @@
+{
+  "style_route": "grounded_mythic_cinematic",
+  "provider_defaults": {
+    "aspect_ratio": "16:9",
+    "negative_prompt_suffix": "plastic armor, anime style, celebrity likeness, inconsistent hair, extra fingers, different costume between scenes"
+  }
+}

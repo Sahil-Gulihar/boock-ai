@@ -16,6 +16,35 @@ construction time, so `compiled_graph.invoke(state)` is the real LangGraph dispa
 end to end, not a manual node-by-node call chain with dependencies smuggled through
 mutable state.
 
+## Why no separate LangChain tool-calling layer
+
+The assignment lists "LangChain or LangChain-compatible tool abstractions" as a required
+technology alongside LangGraph. This pipeline doesn't add a separate LangChain `Tool`/
+`Runnable` layer on top of the graph, and `langchain-core` isn't a direct dependency in
+`requirements.txt` — it's satisfied structurally, not by importing `langchain` APIs
+directly, and that distinction is worth being explicit about rather than letting an unused
+`langchain-core` line in `requirements.txt` imply otherwise (it was removed).
+
+The reason: LangChain's tool abstraction exists for the case where an LLM decides, at
+runtime, *which* function to call next from a set of candidates. Nothing in this pipeline
+has that shape — the ten nodes and their edges are a fixed, known topology decided at
+design time (`ingest_inputs -> retrieve_visual_memory -> ...`), not a set of tools an agent
+selects between. Wrapping each node as a LangChain `@tool` just to have the import present
+would be decoration, not a real use of the abstraction it's meant to provide.
+
+`langgraph` itself is LangGraph's own answer to "LangChain-compatible": it's built directly
+on `langchain-core` primitives (`RunnableConfig` is what `compiled_graph.invoke(state,
+config=...)` uses, and `langgraph`'s own `requires` list includes `langchain-core` as a
+first-class dependency, confirmed via `pip show langgraph`) rather than being a separate,
+parallel ecosystem. Removing the redundant explicit `langchain-core` pin from
+`requirements.txt` doesn't remove the package — it's still installed as LangGraph's own
+transitive dependency — it just stops implying a direct, unused import that isn't there.
+
+If a genuine tool-calling moment existed in this pipeline (e.g. an LLM choosing between
+multiple image providers per scene based on content, rather than a fixed CLI/API `provider`
+argument), that would be the natural place to introduce a real `@tool`-wrapped
+`ImageProvider.generate()`. That's listed as a candidate follow-up below.
+
 ## Why OpenAI as the provider
 
 Started as a user-directed MiniMax choice, then switched to OpenAI `gpt-image-1` once the
@@ -192,6 +221,9 @@ in DynamoDB Local (all four SK shapes), confirmed by querying it back directly w
    under a new pack on purpose" from "this is an accidental regression." A real system
    would want an explicit re-approval workflow (clearing/superseding the old
    `approved_family_id` fact) rather than treating every drift as a hard error forever.
+7. **A real LangChain tool-calling layer**, if the pipeline ever needs an LLM to choose
+   between multiple image providers or strategies per scene at runtime — see "Why no
+   separate LangChain tool-calling layer" above for why that doesn't exist yet.
 
 ~~Run a live-key smoke test against `gpt-image-1`~~ — done: confirmed real `images.edit`
 calls with reference PNGs work end-to-end via both the CLI and the FastAPI server (see

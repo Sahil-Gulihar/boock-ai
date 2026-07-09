@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from src.graph.build_graph import run_job
 from src.providers.factory import build_provider
+from src.persistence.factory import maybe_build_repo
 
 app = FastAPI(title="Boock Character-Consistent Image Pipeline")
 
@@ -18,6 +19,7 @@ class RenderRequest(BaseModel):
     scene_packets_path: str
     provider: str = "mock"
     output_dir: str = "outputs"
+    persist: bool = False
 
 
 @app.post("/v1/image-consistency/render")
@@ -33,6 +35,7 @@ def render(req: RenderRequest):
         provider_name=req.provider,
         output_dir=req.output_dir,
         provider=build_provider(req.provider),
+        repo=maybe_build_repo(req.persist),
     )
     _JOBS[job_id] = {
         "job_id": job_id,

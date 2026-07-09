@@ -3,6 +3,7 @@ import json
 import uuid
 from src.graph.build_graph import run_job
 from src.providers.factory import build_provider
+from src.persistence.factory import maybe_build_repo
 
 
 def lambda_handler(event, context):
@@ -26,6 +27,7 @@ def lambda_handler(event, context):
         provider_name=body.get("provider", "mock"),
         output_dir=body.get("output_dir", "/tmp/outputs"),
         provider=build_provider(body.get("provider", "mock")),
+        repo=maybe_build_repo(body.get("persist", False)),
     )
     return {
         "statusCode": 200,

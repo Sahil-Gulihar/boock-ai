@@ -9,12 +9,18 @@
   `--provider openai` / `"provider": "openai"` will raise since the image provider has no
   fallback path.
 - `DYNAMODB_TABLE_NAME` — defaults to `BoockImageJobs`.
+- `DYNAMODB_ENDPOINT_URL` — when set (e.g. `http://localhost:8000` for the `docker-compose.yml`
+  DynamoDB Local service), persistence auto-enables and points at that endpoint instead of
+  real AWS. Unset in production so boto3 uses the default AWS DynamoDB endpoint.
 - `ARTIFACT_BUCKET_NAME` — S3 bucket for `S3ArtifactStore` in place of `LocalArtifactStore`.
 - `AWS_REGION` — region for DynamoDB/S3 clients.
 
 ## DynamoDB table
 Table `BoockImageJobs`, on-demand billing, PK `PK` (string), SK `SK` (string). See
-README.md "DynamoDB table design" for the full key scheme.
+README.md "DynamoDB table design" for the full key scheme and local-dev instructions
+(`docker compose up -d` + `DYNAMODB_ENDPOINT_URL`). `src/persistence/factory.py::build_repo()`
+creates the table automatically if missing, against either DynamoDB Local or real AWS —
+no manual table provisioning needed for local dev or a fresh AWS account.
 
 ## Artifact bucket
 S3 bucket holding the same key layout as `outputs/<job_id>/...` locally

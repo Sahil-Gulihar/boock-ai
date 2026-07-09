@@ -4,6 +4,7 @@ import json
 import uuid
 from src.graph.build_graph import run_job
 from src.providers.factory import build_provider
+from src.persistence.factory import maybe_build_repo
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -14,6 +15,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--provider", default="mock", choices=["mock", "openai"])
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument("--job-id", default=None)
+    parser.add_argument("--persist", action="store_true", help="Persist job state to DynamoDB (auto-enabled if DYNAMODB_ENDPOINT_URL is set)")
     args = parser.parse_args(argv)
 
     job_id = args.job_id or f"job_{uuid.uuid4().hex[:8]}"
@@ -27,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
         provider_name=args.provider,
         output_dir=args.output_dir,
         provider=build_provider(args.provider),
+        repo=maybe_build_repo(args.persist),
     )
 
     print(json.dumps({"job_id": job_id, "status": state.job_status, "output_dir": f"{args.output_dir}/{job_id}"}))

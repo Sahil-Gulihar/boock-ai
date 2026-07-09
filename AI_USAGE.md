@@ -42,6 +42,16 @@ design, writing the implementation plan, and implementing every task test-first.
    rather than reusing training-data assumptions about DALL-E, since `gpt-image-1`'s SDK
    surface (`images.edit` for multi-reference-image conditioning vs `images.generate`) is
    materially different and directly relevant to the character-consistency goal.
+8. **"my env is alr present but python venv ain't detecting it"** — a real, reproducible
+   bug report, not a hypothetical. Root-caused by tracing the actual failure rather than
+   guessing: `python-dotenv` was listed in `requirements.txt` but nothing in the codebase
+   ever called `load_dotenv()`, so `.env` was silently never read into `os.environ`.
+9. **"make a dockerfile for dynamodb etc"** — asked one clarifying question (DynamoDB Local
+   only vs. also containerizing the app) before writing anything, then verified the whole
+   thing end-to-end with real Docker commands rather than trusting `docker ps` output at
+   face value. That verification step is what caught the DynamoDB Local permission bug
+   described below — `docker ps` reported the container `Up`, but real requests hung
+   forever.
 
 ## Provider switch (MiniMax -> OpenAI)
 
@@ -56,6 +66,31 @@ always ran `MockProvider`. Centralized provider selection into `src/providers/fa
 consistent. This wasn't asked for directly, but leaving it unfixed while switching providers
 "for output quality" would have meant two of three entrypoints still couldn't reach the new,
 higher-quality provider at all.
+
+## DynamoDB Local: a hang that looked like success
+
+Wiring `docker-compose.yml` for DynamoDB Local and running a real end-to-end CLI test
+against it surfaced two more real bugs, only found because the smoke test was actually run
+rather than assumed to work from the config looking reasonable:
+
+1. `docker ps` reported the container `Up`, and `nc -zv localhost 8000` succeeded (TCP
+   accepts connections) — but every real DynamoDB request hung indefinitely. `docker logs`
+   revealed the actual cause: `-dbPath /data` pointed at a Docker volume the official
+   image's non-root user can't write to, so its backing SQLite store never opened
+   (`SQLiteQueue: stopped abnormally, reincarnating in 3000ms`, looping silently). Neither
+   `docker ps` nor a bare TCP check would ever have surfaced this — only an actual
+   `boto3` call against it did. Fixed by switching to `-inMemory -sharedDb`, which needs no
+   writable volume.
+2. Once that was fixed and a real job ran through, `mem0ai==2.0.11`'s `Memory.search()`
+   turned out to have already drifted from the API `mem0_adapter.py` was originally coded
+   against (`ValueError: ... Use filters={'user_id': ...} instead`) — caught by actually
+   exercising the real SDK with a real key, not just the mocked test client, which by
+   construction can't detect its real counterpart's API having moved.
+
+Both fixes were verified by re-running the real pipeline against DynamoDB Local afterward
+and querying the persisted job back out directly with `boto3` to confirm all four SK shapes
+(`META`, `STEP#*`, `ARTIFACT#*`, `MEMORY#*`) were actually populated correctly — not just
+that the command exited 0.
 
 ## Where AI materially helped
 

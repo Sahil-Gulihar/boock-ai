@@ -95,6 +95,40 @@ Single table `BoockImageJobs`, on-demand billing:
 | `JOB#<job_id>` | `ARTIFACT#<type>#<id>` | artifact type/id → storage path |
 | `JOB#<job_id>` | `MEMORY#<entity_id>` | fact-count recorded per entity per job |
 
+### Running against a real (local) DynamoDB
+
+`docker-compose.yml` runs DynamoDB Local:
+
+```bash
+docker compose up -d
+```
+
+Persistence is **off by default** everywhere (CLI, API, Lambda) so a plain `--provider mock`
+run never needs Docker or AWS running — this is what keeps `pytest` and casual runs fast
+and dependency-free. It turns on automatically once `DYNAMODB_ENDPOINT_URL` is set (add it
+to `.env`, or export it inline):
+
+```bash
+DYNAMODB_ENDPOINT_URL=http://localhost:8000 AWS_REGION=us-east-1 python run_pipeline.py \
+  --external-reference-pack provided_inputs/external_reference_pack.json \
+  --visual-bible provided_inputs/visual_bible.json \
+  --scene-packets provided_inputs/scene_packets.json \
+  --provider mock --output-dir outputs
+```
+
+Or force it on explicitly against real AWS with `--persist` (CLI), `"persist": true` (API
+body), or `"persist": true` (Lambda event body) even without `DYNAMODB_ENDPOINT_URL` set.
+`src/persistence/factory.py::build_repo()` creates the table automatically if it doesn't
+already exist, against either DynamoDB Local or real AWS.
+
+**Known DynamoDB Local gotcha** (hit and fixed during this build): the official
+`amazon/dynamodb-local` image's `-dbPath` flag pointed at a Docker volume the container's
+non-root user couldn't write to — the container reports `Up` and accepts TCP connections,
+but every request hangs forever because its backing SQLite store never opens
+(`SQLiteQueue: stopped abnormally, reincarnating in 3000ms` in `docker logs`). Fixed by
+running `-inMemory` instead (see `docker-compose.yml`), which sidesteps the permission
+issue entirely — local dev data doesn't need to survive a container restart anyway.
+
 Implemented in `src/persistence/dynamo_repo.py`, tested against `moto` (no AWS account
 needed) in `tests/test_dynamo_repo.py`.
 

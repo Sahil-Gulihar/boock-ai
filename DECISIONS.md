@@ -74,7 +74,14 @@ in-process dict-backed client with the same `add()`/`search()` shape — this wa
 during implementation (Task 14) after discovering mem0's OpenAI-backed LLM provider raises
 at *client construction time*, not just at call time, which would otherwise have broken
 the CLI/API/pytest "zero external API keys" hard rule the moment any code path exercised
-the default memory adapter.
+the default memory adapter. A separate, later fix: the installed `mem0ai==2.0.11`'s
+`Memory.search()` had also drifted from the API originally coded against — it now rejects
+a top-level `user_id` kwarg in favor of `filters={"user_id": ...}` and renamed `limit` to
+`top_k`. Rather than push that SDK-version churn into `VisualMemoryAdapter` or its test
+fakes, `_Mem0ClientShim` absorbs it, translating Boock's stable internal call shape
+(`add(messages, user_id, infer)` / `search(query, user_id, limit)`) into whatever mem0's
+current SDK actually wants — this is the isolation the "clearly isolated memory adapter"
+requirement is for: mem0's version churn shouldn't leak into the rest of the pipeline.
 
 ## How DynamoDB is modeled
 
@@ -83,6 +90,31 @@ Single table `BoockImageJobs`, PK `JOB#<job_id>`, four SK shapes (`META`,
 concern, queryable in one `PK`-scoped query for the whole job's history. Implemented in
 `src/persistence/dynamo_repo.py`, tested against `moto` (`tests/test_dynamo_repo.py`, one
 of the four required tests) so no AWS account is needed for development or CI.
+
+Persistence is wired into all three entrypoints (CLI, FastAPI, Lambda) via
+`src/persistence/factory.py::maybe_build_repo()`, but stays **off by default** — it only
+activates when `DYNAMODB_ENDPOINT_URL` is set (pointing at the `docker-compose.yml`
+DynamoDB Local service) or an explicit `--persist`/`"persist": true` opt-in is given. This
+was a deliberate choice, not an oversight: making persistence unconditional would mean
+`pytest`, the CLI's basic `--provider mock` path, and casual local runs would all suddenly
+require Docker or real AWS credentials just to complete, which conflicts with "tests run
+with zero external dependencies." `build_repo()` also creates the table automatically
+(idempotently — `ResourceInUseException` is caught and ignored) if it doesn't already
+exist, against either DynamoDB Local or real AWS, so nobody has to hand-provision it first.
+
+**DynamoDB Local gotcha found and fixed**: the first `docker-compose.yml` pointed
+`-dbPath` at a named Docker volume (`/data`) that the official `amazon/dynamodb-local`
+image's non-root container user can't write to. The container reports `Up` and accepts
+TCP connections, but every request just hangs forever — `docker logs` showed
+`SQLiteQueue[shared-local-instance.db]: stopped abnormally, reincarnating in 3000ms` on
+a loop, meaning the backing SQLite store never successfully opened. This is a genuinely
+misleading failure mode: `docker ps` looks healthy, `nc -zv localhost 8000` succeeds (TCP
+accepts), but any real request (e.g. `boto3`'s table-list call) blocks indefinitely with
+no error. Fixed by switching to `-inMemory -sharedDb`, which needs no writable volume at
+all — local dev data doesn't need to survive a container restart, so persistence-to-disk
+wasn't worth the permission complexity. Verified end-to-end after the fix: a real CLI run
+with `DYNAMODB_ENDPOINT_URL=http://localhost:8000` produced a fully-populated job record
+in DynamoDB Local (all four SK shapes), confirmed by querying it back directly with boto3.
 
 ## What's mocked vs real
 

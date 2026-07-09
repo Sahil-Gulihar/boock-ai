@@ -1,0 +1,13 @@
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:2.5.4
+    container_name: boock-dynamodb-local
+    ports:
+      - "8000:8000"
+    # -inMemory avoids the official image's known permission trap where
+    # -dbPath points at a directory its non-root user can't write to,
+    # which makes DynamoDB Local accept TCP connections but hang forever
+    # on every request (SQLite fails to open, queue crash-loops silently).
+    # Local dev data doesn't need to survive a container restart anyway.
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    working_dir: /home/dynamodblocal

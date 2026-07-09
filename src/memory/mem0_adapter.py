@@ -23,6 +23,26 @@ class _LocalFallbackMemoryClient:
         return {"results": [{"memory": m} for m in facts]}
 
 
+class _Mem0ClientShim:
+    """Adapts mem0's current Memory API (filters=, top_k=) to Boock's simpler
+    internal client shape (user_id=, limit=), so the rest of this module and
+    its test fakes don't need to track mem0's SDK API churn directly.
+
+    Installed mem0ai==2.0.11 removed the top-level user_id kwarg from
+    search() in favor of filters={"user_id": ...} and renamed limit to
+    top_k -- this shim is where that gets absorbed.
+    """
+
+    def __init__(self, memory):
+        self._memory = memory
+
+    def add(self, messages, user_id, infer=True):
+        self._memory.add(messages, user_id=user_id, infer=infer)
+
+    def search(self, query, user_id, limit=10):
+        return self._memory.search(query=query, filters={"user_id": user_id}, top_k=limit)
+
+
 def _build_default_client():
     if not os.environ.get("OPENAI_API_KEY"):
         return _LocalFallbackMemoryClient()
@@ -39,7 +59,7 @@ def _build_default_client():
             "config": {"collection_name": "boock_visual_memory", "path": "chroma_db"},
         },
     }
-    return Memory.from_config(config)
+    return _Mem0ClientShim(Memory.from_config(config))
 
 
 class VisualMemoryAdapter:

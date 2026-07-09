@@ -73,7 +73,14 @@ class VisualMemoryAdapter:
         self.client = memory_client or _build_default_client()
 
     def save_fact(self, entity_id: str, fact: str) -> None:
-        self.client.add(fact, user_id=entity_id)
+        # infer=False: our facts are already structured strings (e.g.
+        # "approved_family_id=..."), not freeform text for mem0's own LLM to
+        # extract/paraphrase. With infer=True (mem0's default), a real
+        # mem0-backed client rewrites the saved string through its LLM (e.g.
+        # into "User approved the family ID '...' for Mira's character."),
+        # which silently breaks any exact-match/prefix parsing of facts
+        # downstream (see select_generation_strategy's drift detection).
+        self.client.add(fact, user_id=entity_id, infer=False)
 
     def get_facts(self, entity_id: str) -> list[str]:
         result = self.client.search(query="visual identity facts", user_id=entity_id, limit=25)

@@ -7,6 +7,7 @@ class QACheckResult(BaseModel):
     passed: bool
     severity: str  # "info" | "warning" | "blocker"
     message: str
+    entity_id: str | None = None
 
 
 class SceneQAResult(BaseModel):

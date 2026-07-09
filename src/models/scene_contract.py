@@ -17,3 +17,4 @@ class SceneRenderContract(BaseModel):
     safety_notes: list[str] = []
     blocked: bool = False
     block_reason: str | None = None
+    block_entity_id: str | None = None

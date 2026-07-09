@@ -22,7 +22,7 @@ def build_graph(provider=None, artifact_store=None, repo=None, memory_adapter=No
     graph.add_node("ingest_inputs", N.ingest_inputs)
     graph.add_node("retrieve_visual_memory", partial(N.retrieve_visual_memory, memory_adapter=memory_adapter))
     graph.add_node("build_reference_conditioning_contract", N.build_reference_conditioning_contract)
-    graph.add_node("build_reference_lock_family_manifest", N.build_reference_lock_family_manifest)
+    graph.add_node("build_reference_lock_family_manifest", partial(N.build_reference_lock_family_manifest, memory_adapter=memory_adapter))
     graph.add_node("select_generation_strategy", N.select_generation_strategy)
     graph.add_node("render_scene_images", partial(N.render_scene_images, provider=provider, artifact_store=artifact_store))
     graph.add_node("validate_scene_consistency", partial(N.validate_scene_consistency, artifact_store=artifact_store))

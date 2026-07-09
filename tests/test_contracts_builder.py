@@ -26,9 +26,9 @@ def test_build_reference_conditioning_contract_produces_typed_refs():
     assert ref.source_asset_id == "mira_face_ref"
     assert ref.source_path == "provided_inputs/reference_assets/mira_face_ref.png"
     assert "face_identity" in ref.preserve_facets
-    assert ref.family_id == "lockfam_character_mira_v001"
+    assert ref.family_id == "lockfam_character_mira_refpack_demo_v001"
     assert ref.required is True
 
     seal_props = [r for r in contract.prop_refs if r.entity_id == "black_seal"]
     assert len(seal_props) == 1
-    assert seal_props[0].family_id == "lockfam_prop_black_seal_v001"
+    assert seal_props[0].family_id == "lockfam_prop_black_seal_refpack_demo_v001"

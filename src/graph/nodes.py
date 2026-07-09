@@ -35,23 +35,33 @@ def retrieve_visual_memory(state: GraphState, memory_adapter: VisualMemoryAdapte
                 adapter.save_fact(entity.entity_id, f"{entity.display_name} must preserve: {facet}")
             existing = adapter.get_facts(entity.entity_id)
         facts[entity.entity_id] = existing
+
+    location = state.visual_bible.location
+    existing_location = adapter.get_facts(location.location_id)
+    if not existing_location:
+        for marker in location.identity_markers:
+            adapter.save_fact(location.location_id, f"{location.location_id} must preserve: {marker}")
+        existing_location = adapter.get_facts(location.location_id)
+    facts[location.location_id] = existing_location
+
     state.memory_facts = facts
     return state
 
 
-def _family_id(entity_type: str, entity_id: str) -> str:
-    return f"lockfam_{entity_type}_{entity_id}_v001"
+def _family_id(entity_type: str, entity_id: str, reference_pack_id: str) -> str:
+    return f"lockfam_{entity_type}_{entity_id}_{reference_pack_id}"
 
 
 def build_reference_conditioning_contract(state: GraphState) -> GraphState:
     contract = ReferenceConditioningContract()
+    reference_pack_id = state.external_reference_pack.reference_pack_id
     for entity in state.external_reference_pack.entities:
         for asset in entity.reference_assets:
             ref = TypedRef(
                 entity_type=entity.entity_type,
                 entity_id=entity.entity_id,
                 display_name=entity.display_name,
-                family_id=_family_id(entity.entity_type, entity.entity_id),
+                family_id=_family_id(entity.entity_type, entity.entity_id, reference_pack_id),
                 view_id="face_front_close" if entity.entity_type == "character" else "prop_detail",
                 role=asset.role,
                 weight=1.0,
@@ -73,11 +83,14 @@ def build_reference_conditioning_contract(state: GraphState) -> GraphState:
     return state
 
 
-def build_reference_lock_family_manifest(state: GraphState) -> GraphState:
+def build_reference_lock_family_manifest(state: GraphState, memory_adapter: VisualMemoryAdapter | None = None) -> GraphState:
+    adapter = memory_adapter or VisualMemoryAdapter()
+    reference_pack_id = state.external_reference_pack.reference_pack_id
     manifest = ReferenceLockFamilyManifest()
     for entity in state.external_reference_pack.entities:
+        family_id = _family_id(entity.entity_type, entity.entity_id, reference_pack_id)
         manifest.families.append(LockFamilyRecord(
-            family_id=_family_id(entity.entity_type, entity.entity_id),
+            family_id=family_id,
             entity_type=entity.entity_type,
             entity_id=entity.entity_id,
             display_name=entity.display_name,
@@ -86,6 +99,12 @@ def build_reference_lock_family_manifest(state: GraphState) -> GraphState:
             approval_state="qa_pending",
             source_external_ref_ids=[a.asset_id for a in entity.reference_assets],
         ))
+        # Durable record of "which reference-pack-derived family was approved
+        # for this entity" -- lets a later run detect family drift (see
+        # select_generation_strategy) if the same entity_id is later ingested
+        # from a different reference pack, without needing the two refs to
+        # be in the same contract at once.
+        adapter.save_fact(entity.entity_id, f"approved_family_id={family_id}")
     state.lock_family_manifest = manifest
     return state
 
@@ -94,26 +113,56 @@ def _seed_for_scene(scene_id: str) -> int:
     return abs(hash(scene_id)) % (2 ** 31)
 
 
+def _prior_approved_family_ids(entity_id: str, memory_facts: dict[str, list[str]]) -> set[str]:
+    prefix = "approved_family_id="
+    return {
+        fact[len(prefix):] for fact in memory_facts.get(entity_id, [])
+        if fact.startswith(prefix)
+    }
+
+
 def select_generation_strategy(state: GraphState) -> GraphState:
     contract = state.reference_conditioning_contract
     contracts: dict[str, SceneRenderContract] = {}
 
     for scene in state.scene_packets.scenes:
-        character_families: dict[str, set[str]] = {}
-        for entity_id in scene.characters:
+        entity_families: dict[str, set[str]] = {}
+        for entity_id in list(scene.characters) + list(scene.props):
             refs = contract.refs_for_entity(entity_id)
-            character_families[entity_id] = {r.family_id for r in refs}
-        for prop_id in scene.props:
-            refs = contract.refs_for_entity(prop_id)
-            character_families[prop_id] = {r.family_id for r in refs}
+            entity_families[entity_id] = {r.family_id for r in refs}
 
         block_reason = None
-        for entity_id, family_ids in character_families.items():
+        block_entity_id = None
+
+        # Same-run defense: two refs for one entity already disagree within
+        # this single contract.
+        for entity_id, family_ids in entity_families.items():
             if len(family_ids) > 1:
                 block_reason = f"Mixed family_id refs for entity '{entity_id}': {sorted(family_ids)}"
+                block_entity_id = entity_id
                 break
 
-        family_ids = sorted({fid for fids in character_families.values() for fid in fids})
+        # Cross-run defense: this run's computed family_id for an entity
+        # disagrees with a family_id previously approved (and memorized) for
+        # that same entity_id -- the realistic trigger for the hard block,
+        # e.g. an operator re-running the pipeline against a rotated/updated
+        # reference pack for a character that was already approved before.
+        if block_reason is None:
+            for entity_id, family_ids in entity_families.items():
+                if not family_ids:
+                    continue
+                current_family_id = next(iter(family_ids))
+                prior_family_ids = _prior_approved_family_ids(entity_id, state.memory_facts)
+                drifted = prior_family_ids - {current_family_id}
+                if drifted:
+                    block_reason = (
+                        f"Family drift for entity '{entity_id}': previously approved "
+                        f"family_id(s) {sorted(drifted)}, current run computed '{current_family_id}'"
+                    )
+                    block_entity_id = entity_id
+                    break
+
+        family_ids = sorted({fid for fids in entity_families.values() for fid in fids})
         view_ids = sorted({
             r.view_id for entity_id in list(scene.characters) + list(scene.props)
             for r in contract.refs_for_entity(entity_id)
@@ -134,6 +183,7 @@ def select_generation_strategy(state: GraphState) -> GraphState:
             safety_notes=[],
             blocked=block_reason is not None,
             block_reason=block_reason,
+            block_entity_id=block_entity_id,
         )
 
     state.scene_render_contracts = contracts
@@ -166,27 +216,60 @@ def validate_scene_consistency(state: GraphState, artifact_store) -> GraphState:
             checks.append(QACheckResult(
                 check_name="mixed_family_block", passed=False, severity="blocker",
                 message=scene_contract.block_reason or "scene blocked",
+                entity_id=scene_contract.block_entity_id,
             ))
             scene_results.append(SceneQAResult(scene_id=scene_id, checks=checks, verdict="blocked"))
             continue
 
-        required_chars_present = all(
-            state.reference_conditioning_contract.refs_for_entity(c) for c in scene_contract.required_character_refs
-        )
-        checks.append(QACheckResult(
-            check_name="required_characters_present", passed=required_chars_present,
-            severity="blocker" if not required_chars_present else "info",
-            message="all required character refs found" if required_chars_present else "missing character refs",
-        ))
+        missing_characters = [
+            c for c in scene_contract.required_character_refs
+            if not state.reference_conditioning_contract.refs_for_entity(c)
+        ]
+        if missing_characters:
+            for entity_id in missing_characters:
+                checks.append(QACheckResult(
+                    check_name="required_characters_present", passed=False, severity="blocker",
+                    message=f"missing character ref for '{entity_id}'", entity_id=entity_id,
+                ))
+        else:
+            checks.append(QACheckResult(
+                check_name="required_characters_present", passed=True, severity="info",
+                message="all required character refs found",
+            ))
 
-        required_props_present = all(
-            state.reference_conditioning_contract.refs_for_entity(p) for p in scene_contract.required_prop_refs
-        )
-        checks.append(QACheckResult(
-            check_name="required_props_present", passed=required_props_present,
-            severity="blocker" if not required_props_present else "info",
-            message="all required prop refs found" if required_props_present else "missing prop refs",
-        ))
+        missing_props = [
+            p for p in scene_contract.required_prop_refs
+            if not state.reference_conditioning_contract.refs_for_entity(p)
+        ]
+        if missing_props:
+            for entity_id in missing_props:
+                checks.append(QACheckResult(
+                    check_name="required_props_present", passed=False, severity="blocker",
+                    message=f"missing prop ref for '{entity_id}'", entity_id=entity_id,
+                ))
+        else:
+            checks.append(QACheckResult(
+                check_name="required_props_present", passed=True, severity="info",
+                message="all required prop refs found",
+            ))
+
+        unapproved_refs = [
+            e for e in (scene_contract.required_character_refs + scene_contract.required_prop_refs)
+            if e not in missing_characters and e not in missing_props
+            and not any(r.approval_state == "approved" for r in state.reference_conditioning_contract.refs_for_entity(e))
+        ]
+        if unapproved_refs:
+            for entity_id in unapproved_refs:
+                checks.append(QACheckResult(
+                    check_name="required_refs_approved", passed=False, severity="blocker",
+                    message=f"required ref for '{entity_id}' is not approved and has no explicit fallback",
+                    entity_id=entity_id,
+                ))
+        else:
+            checks.append(QACheckResult(
+                check_name="required_refs_approved", passed=True, severity="info",
+                message="all required refs are approved or explicitly fallback",
+            ))
 
         image_result = state.scene_images.get(scene_id)
         image_exists = image_result is not None and image_result.width > 0 and image_result.height > 0
@@ -229,8 +312,18 @@ _RERUN_NODE_BY_CHECK = {
     "mixed_family_block": "build_reference_lock_family_manifest",
     "required_characters_present": "build_reference_conditioning_contract",
     "required_props_present": "build_reference_conditioning_contract",
+    "required_refs_approved": "build_reference_conditioning_contract",
     "scene_image_exists_and_valid_dimensions": "render_scene_images",
     "provider_metadata_recorded": "render_scene_images",
+}
+
+_RECOMMENDED_ACTION_BY_CHECK = {
+    "mixed_family_block": "generate_missing_lock_view",
+    "required_characters_present": "generate_missing_lock_view",
+    "required_props_present": "generate_missing_lock_view",
+    "required_refs_approved": "approve_or_replace_reference",
+    "scene_image_exists_and_valid_dimensions": "rerun_render",
+    "provider_metadata_recorded": "rerun_render",
 }
 
 
@@ -243,20 +336,28 @@ def decide_pass_repair_or_block(state: GraphState) -> GraphState:
     for scene_result in state.qa_report.scene_results:
         if scene_result.verdict not in ("needs_repair", "blocked"):
             continue
-        failing = next(c for c in scene_result.checks if not c.passed and c.severity == "blocker")
-        entity_id = None
+        failing_checks = [c for c in scene_result.checks if not c.passed and c.severity == "blocker"]
         scene_packet = scene_packets_by_id.get(scene_result.scene_id)
+        fallback_entity_id = None
         if scene_packet is not None and (scene_packet.characters or scene_packet.props):
-            entity_id = (scene_packet.characters + scene_packet.props)[0]
-        tickets.append(RepairTicket(
-            ticket_id=f"repair_{scene_result.scene_id}_{failing.check_name}",
-            severity="blocker",
-            scene_id=scene_result.scene_id,
-            entity_id=entity_id,
-            problem=failing.message,
-            recommended_action="generate_missing_lock_view" if "family" in failing.check_name or "characters" in failing.check_name else "rerun_render",
-            rerun_from_node=_RERUN_NODE_BY_CHECK.get(failing.check_name, "build_reference_conditioning_contract"),
-        ))
+            fallback_entity_id = (scene_packet.characters + scene_packet.props)[0]
+
+        for failing in failing_checks:
+            # Prefer the check's own typed entity_id (set precisely by
+            # validate_scene_consistency/select_generation_strategy) over
+            # the coarse "first entity in the scene" fallback, which is only
+            # correct by coincidence for checks that don't carry one.
+            entity_id = failing.entity_id or fallback_entity_id
+            ticket_suffix = entity_id or "scene"
+            tickets.append(RepairTicket(
+                ticket_id=f"repair_{scene_result.scene_id}_{failing.check_name}_{ticket_suffix}",
+                severity="blocker",
+                scene_id=scene_result.scene_id,
+                entity_id=entity_id,
+                problem=failing.message,
+                recommended_action=_RECOMMENDED_ACTION_BY_CHECK.get(failing.check_name, "rerun_render"),
+                rerun_from_node=_RERUN_NODE_BY_CHECK.get(failing.check_name, "build_reference_conditioning_contract"),
+            ))
     state.repair_tickets = RepairTicketManifest(tickets=tickets)
     state.job_status = state.qa_report.overall_verdict
     return state

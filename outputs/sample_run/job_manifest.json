@@ -3,7 +3,7 @@
   "book_version_id": "boock_demo_visual_001",
   "variant_id": "variant_cinematic_default",
   "status": "approved",
-  "created_at": "1783561730",
+  "created_at": "1783624606",
   "artifacts": {
     "reference_conditioning_contract": "sample_run/reference_conditioning_contract.json",
     "reference_lock_family_manifest": "sample_run/reference_lock_family_manifest.json",

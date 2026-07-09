@@ -11,14 +11,15 @@
     "ruined_watchtower"
   ],
   "family_ids": [
-    "lockfam_character_mira_v001"
+    "lockfam_character_mira_refpack_demo_v001"
   ],
   "view_ids": [
     "face_front_close"
   ],
   "provider": "mock",
-  "seed": 1119292422,
+  "seed": 642349749,
   "safety_notes": [],
   "blocked": false,
-  "block_reason": null
+  "block_reason": null,
+  "block_entity_id": null
 }

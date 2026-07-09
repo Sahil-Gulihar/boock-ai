@@ -8,25 +8,36 @@
           "check_name": "required_characters_present",
           "passed": true,
           "severity": "info",
-          "message": "all required character refs found"
+          "message": "all required character refs found",
+          "entity_id": null
         },
         {
           "check_name": "required_props_present",
           "passed": true,
           "severity": "info",
-          "message": "all required prop refs found"
+          "message": "all required prop refs found",
+          "entity_id": null
+        },
+        {
+          "check_name": "required_refs_approved",
+          "passed": true,
+          "severity": "info",
+          "message": "all required refs are approved or explicitly fallback",
+          "entity_id": null
         },
         {
           "check_name": "scene_image_exists_and_valid_dimensions",
           "passed": true,
           "severity": "info",
-          "message": "image rendered with valid dimensions"
+          "message": "image rendered with valid dimensions",
+          "entity_id": null
         },
         {
           "check_name": "provider_metadata_recorded",
           "passed": true,
           "severity": "info",
-          "message": "provider metadata present"
+          "message": "provider metadata present",
+          "entity_id": null
         }
       ],
       "verdict": "approved"
@@ -38,25 +49,36 @@
           "check_name": "required_characters_present",
           "passed": true,
           "severity": "info",
-          "message": "all required character refs found"
+          "message": "all required character refs found",
+          "entity_id": null
         },
         {
           "check_name": "required_props_present",
           "passed": true,
           "severity": "info",
-          "message": "all required prop refs found"
+          "message": "all required prop refs found",
+          "entity_id": null
+        },
+        {
+          "check_name": "required_refs_approved",
+          "passed": true,
+          "severity": "info",
+          "message": "all required refs are approved or explicitly fallback",
+          "entity_id": null
         },
         {
           "check_name": "scene_image_exists_and_valid_dimensions",
           "passed": true,
           "severity": "info",
-          "message": "image rendered with valid dimensions"
+          "message": "image rendered with valid dimensions",
+          "entity_id": null
         },
         {
           "check_name": "provider_metadata_recorded",
           "passed": true,
           "severity": "info",
-          "message": "provider metadata present"
+          "message": "provider metadata present",
+          "entity_id": null
         }
       ],
       "verdict": "approved"

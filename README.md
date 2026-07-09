@@ -58,7 +58,7 @@ on DynamoDB Local instead of the API.
 pytest -v
 ```
 
-All 30 tests pass with **zero external API keys** — `MockProvider` is the default/only
+All 42 tests pass with **zero external API keys** — `MockProvider` is the default/only
 provider exercised in tests, and `VisualMemoryAdapter` falls back to a local in-process
 store when `OPENAI_API_KEY` isn't set (see DECISIONS.md).
 
@@ -150,13 +150,14 @@ needed) in `tests/test_dynamo_repo.py`.
   labeled placeholder PNGs in their place. Metadata/contract wiring is real; the pixel
   content is not.
 - **QA checks are rule-based, not embedding-based**: `validate_scene_consistency` checks
-  presence, mixed-family blocking, artifact/dimension validity, and provider metadata —
-  it does not run CLIP/face-embedding similarity, OCR, or color-palette drift checks
-  (listed as bonus checks in the assignment). Documented as a productionization item in
-  DECISIONS.md.
-- **`OpenAIImageProvider` is untested against a live account** — the SDK call shape
-  (`images.edit`/`images.generate` with `gpt-image-1`) was verified against OpenAI's
-  current docs, but no real paid-key run has been performed as part of this submission
-  (see DECISIONS.md).
+  character/prop/location presence, reference approval state, mixed-family blocking
+  (same-run and cross-run drift), artifact/dimension validity, and provider metadata — it
+  does not run CLIP/face-embedding similarity, OCR, or color-palette drift checks (listed
+  as bonus checks in the assignment). Documented as a productionization item in
+  DECISIONS.md. `EXAMPLES.md` shows a real case (scene 2's prop drifting into a literal
+  animal) that an embedding-based check would have caught and this rule-based QA cannot.
+- **Family-drift detection assumes every drift is unwanted.** If an entity is legitimately
+  re-approved under a new reference pack on purpose, the current design still blocks it as
+  drift (no re-approval/supersede workflow exists yet — see DECISIONS.md).
 - If `OPENAI_API_KEY` isn't set, `VisualMemoryAdapter` falls back automatically to a local
   in-process store so the pipeline keeps working without any keys at all.

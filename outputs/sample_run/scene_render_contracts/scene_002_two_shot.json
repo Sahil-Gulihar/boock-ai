@@ -14,17 +14,18 @@
     "ruined_watchtower"
   ],
   "family_ids": [
-    "lockfam_character_arin_v001",
-    "lockfam_character_mira_v001",
-    "lockfam_prop_black_seal_v001"
+    "lockfam_character_arin_refpack_demo_v001",
+    "lockfam_character_mira_refpack_demo_v001",
+    "lockfam_prop_black_seal_refpack_demo_v001"
   ],
   "view_ids": [
     "face_front_close",
     "prop_detail"
   ],
   "provider": "mock",
-  "seed": 1424050723,
+  "seed": 1975557280,
   "safety_notes": [],
   "blocked": false,
-  "block_reason": null
+  "block_reason": null,
+  "block_entity_id": null
 }

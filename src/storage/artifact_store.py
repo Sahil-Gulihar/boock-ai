@@ -36,7 +36,7 @@ class LocalArtifactStore:
         return json.loads((self.base_dir / key).read_text())
 
     def path_for(self, key: str) -> str:
-        return str(self.base_dir / key)
+        return str(self._full_path(key))
 
 
 class S3ArtifactStore:

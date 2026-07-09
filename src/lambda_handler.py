@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import uuid
 from src.graph.build_graph import run_job
+from src.providers.factory import build_provider
 
 
 def lambda_handler(event, context):
@@ -24,6 +25,7 @@ def lambda_handler(event, context):
         scene_packets_path=body["scene_packets_path"],
         provider_name=body.get("provider", "mock"),
         output_dir=body.get("output_dir", "/tmp/outputs"),
+        provider=build_provider(body.get("provider", "mock")),
     )
     return {
         "statusCode": 200,

@@ -1,12 +1,13 @@
 # Deploy Notes (Lambda-readiness, not deployed)
 
 ## Environment variables
-- `MINIMAX_API_KEY`, `MINIMAX_GROUP_ID` — image provider credentials. **Do not set as plain
-  Lambda env vars in production** — AWS recommends Secrets Manager for sensitive values;
-  fetch at cold-start and cache in the execution environment instead.
-- `OPENAI_API_KEY` — used only internally by mem0's fact-extraction step. Same Secrets
-  Manager guidance applies. If unset, `VisualMemoryAdapter` falls back automatically to a
-  local in-process memory store (see DECISIONS.md) rather than failing.
+- `OPENAI_API_KEY` — used for both the real image provider (`gpt-image-1`) and internally
+  by mem0's fact-extraction step. **Do not set as a plain Lambda env var in production** —
+  AWS recommends Secrets Manager for sensitive values; fetch at cold-start and cache in the
+  execution environment instead. If unset, `VisualMemoryAdapter` falls back automatically
+  to a local in-process memory store (see DECISIONS.md) rather than failing, but
+  `--provider openai` / `"provider": "openai"` will raise since the image provider has no
+  fallback path.
 - `DYNAMODB_TABLE_NAME` — defaults to `BoockImageJobs`.
 - `ARTIFACT_BUCKET_NAME` — S3 bucket for `S3ArtifactStore` in place of `LocalArtifactStore`.
 - `AWS_REGION` — region for DynamoDB/S3 clients.

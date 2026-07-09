@@ -3,6 +3,7 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from src.graph.build_graph import run_job
+from src.providers.factory import build_provider
 
 app = FastAPI(title="Boock Character-Consistent Image Pipeline")
 
@@ -31,6 +32,7 @@ def render(req: RenderRequest):
         scene_packets_path=req.scene_packets_path,
         provider_name=req.provider,
         output_dir=req.output_dir,
+        provider=build_provider(req.provider),
     )
     _JOBS[job_id] = {
         "job_id": job_id,

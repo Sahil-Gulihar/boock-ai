@@ -16,17 +16,33 @@ construction time, so `compiled_graph.invoke(state)` is the real LangGraph dispa
 end to end, not a manual node-by-node call chain with dependencies smuggled through
 mutable state.
 
-## Why MiniMax as the provider
+## Why OpenAI as the provider
 
-User-directed choice. Isolated behind the `ImageProvider` protocol (`src/providers/base.py`)
-so it's swappable — `MockProvider` is the default and the only one exercised in tests
-(the assignment's hard rule: tests must never need a paid key). The MiniMax
-`image_generation` endpoint shape was looked up against MiniMax's actual platform docs
-(`https://platform.minimax.io/docs/guides/image-generation`) rather than guessed, to avoid
-shipping a plausible-looking but wrong request format. One assumption remains unverified:
-whether `subject_reference.image_file` accepts a base64 data URI for local reference images
-(the documented examples show a URL) — flagged in README.md and the plan as needing a
-live-key smoke test before being trusted in production.
+Started as a user-directed MiniMax choice, then switched to OpenAI `gpt-image-1` once the
+user clarified that for this small system, output quality mattered more than provider
+diversity. `gpt-image-1` is OpenAI's current highest-quality image model and — unlike a
+plain text-to-image call — its `images.edit` endpoint accepts multiple reference images
+directly, which maps naturally onto the reference-conditioning-contract design already in
+place: `OpenAIImageProvider.generate()` passes the resolved character/prop reference PNGs
+straight into `images.edit(image=[...], prompt=...)` when a scene has any, giving real
+image-conditioned generation rather than prompt-only description. Scenes with no references
+(a pure establishing shot) fall back to `images.generate(...)`. Both the endpoint shape and
+the SDK method names were looked up against OpenAI's current docs
+(`developers.openai.com/api/docs/guides/image-generation`) rather than guessed.
+
+Isolated behind the same `ImageProvider` protocol (`src/providers/base.py`) as before, so
+it remains swappable — `MockProvider` is still the default and the only provider exercised
+in tests (the assignment's hard rule: tests must never need a paid key). Provider selection
+is centralized in `src/providers/factory.py`, used identically by the CLI, FastAPI app, and
+Lambda handler — previously only the CLI actually constructed the real provider object
+(`_build_provider`); the API and Lambda entrypoints silently ignored the requested provider
+name and always used `MockProvider`. That inconsistency was caught and fixed while making
+this switch, since a "quality matters most" request loses its force if two of three
+entrypoints can't actually reach the real provider.
+
+The old `MiniMaxProvider` (and its endpoint verification) was removed rather than kept
+alongside — the assignment only needs one real provider behind the interface, and keeping
+a second, entirely unused real-provider implementation around would just be dead code.
 
 ## How character consistency is enforced
 
@@ -50,11 +66,10 @@ Two layers:
 must preserve: hair_color") into mem0 on first run per entity, then reads them back on
 every subsequent run — the point being that visual identity facts aren't rediscovered from
 scratch each job. mem0's own LLM (used internally by mem0 for its fact
-extraction/dedup step) is configured to OpenAI, not MiniMax — mem0 doesn't have a native
-MiniMax LLM provider; routing it through LiteLLM's newer MiniMax support was considered and
-rejected as unnecessary integration risk for a part of the assignment that's explicitly
-optional-equivalent (see brainstorming transcript). If `OPENAI_API_KEY` isn't set,
-`VisualMemoryAdapter` falls back automatically to `_LocalFallbackMemoryClient`, an
+extraction/dedup step) is configured to OpenAI's `gpt-4o-mini` — the same `OPENAI_API_KEY`
+now also used for the real image provider, so switching to OpenAI for images removed a
+previous two-provider-key-management concern rather than adding one. If `OPENAI_API_KEY`
+isn't set, `VisualMemoryAdapter` falls back automatically to `_LocalFallbackMemoryClient`, an
 in-process dict-backed client with the same `add()`/`search()` shape — this was a fix made
 during implementation (Task 14) after discovering mem0's OpenAI-backed LLM provider raises
 at *client construction time*, not just at call time, which would otherwise have broken
@@ -73,8 +88,9 @@ of the four required tests) so no AWS account is needed for development or CI.
 
 - **Image provider**: `MockProvider` is a real, deterministic, fully-functional
   implementation (not a stub) — same seed always produces identical pixels, correct
-  `ImageResult` metadata. `MiniMaxProvider` is real code calling a real (looked-up, not
-  guessed) endpoint, but only exercised with a live key outside of pytest.
+  `ImageResult` metadata. `OpenAIImageProvider` is real code calling the real, looked-up
+  `gpt-image-1` SDK methods (`images.edit`/`images.generate`), but only exercised with a
+  live key outside of pytest — no paid-key smoke test was run as part of this submission.
 - **DynamoDB**: real boto3 code path, exercised against `moto`'s in-process AWS mock, not
   a live AWS account.
 - **S3 storage**: real `S3ArtifactStore` code path (boto3), exercised against `moto`; the
@@ -93,11 +109,11 @@ of the four required tests) so no AWS account is needed for development or CI.
    scenes and reference images, prop similarity, and OCR/text-artifact detection to
    `validate_scene_consistency` — currently rule-based only (presence, mixed-family block,
    artifact/dimension validity, provider metadata).
-3. **Secrets Manager** for `MINIMAX_API_KEY`/`OPENAI_API_KEY` instead of plain Lambda env
-   vars.
-4. **Verify MiniMax's `subject_reference` data-URI behavior** against a live account, or
-   switch to pre-uploading reference images and passing URLs if data URIs aren't actually
-   supported.
+3. **Secrets Manager** for `OPENAI_API_KEY` instead of a plain Lambda env var.
+4. **Run a live-key smoke test against `gpt-image-1`** — confirm the `images.edit` call
+   with multiple reference PNGs behaves as documented (image quality, adherence to
+   reference identity, latency/cost at `quality="high"`) before treating this as
+   production-validated.
 5. **Real Boock-supplied reference images** in place of the synthetic placeholders, and a
    corresponding lock-family QA pass that actually validates cross-view identity
    consistency rather than just presence.

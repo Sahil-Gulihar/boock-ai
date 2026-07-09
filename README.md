@@ -11,7 +11,7 @@ durable visual memory.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in MINIMAX_API_KEY / OPENAI_API_KEY if you want real providers
+cp .env.example .env   # fill in OPENAI_API_KEY if you want the real image provider
 ```
 
 Python 3.11+ required (developed and tested on 3.14).
@@ -29,8 +29,8 @@ python run_pipeline.py \
   --output-dir outputs
 ```
 
-Pass `--provider minimax` to use the real MiniMax `image-01` backend (requires
-`MINIMAX_API_KEY` in the environment). `outputs/sample_run/` in this repo was generated
+Pass `--provider openai` to use the real OpenAI `gpt-image-1` backend (requires
+`OPENAI_API_KEY` in the environment). `outputs/sample_run/` in this repo was generated
 with `--provider mock --job-id sample_run`.
 
 FastAPI:
@@ -47,18 +47,26 @@ uvicorn src.api.app:app --reload
 pytest -v
 ```
 
-All 26 tests pass with **zero external API keys** — `MockProvider` is the default/only
+All 30 tests pass with **zero external API keys** — `MockProvider` is the default/only
 provider exercised in tests, and `VisualMemoryAdapter` falls back to a local in-process
 store when `OPENAI_API_KEY` isn't set (see DECISIONS.md).
 
 ## Chosen image provider
 
-**MiniMax `image-01`** (`src/providers/minimax_provider.py`), behind the `ImageProvider`
-protocol (`src/providers/base.py`). Endpoint: `POST https://api.minimax.io/v1/image_generation`,
-verified against MiniMax's platform docs on 2026-07-09. Reference images are passed via
-`subject_reference` as base64 data URIs — this specific data-URI-for-local-files behavior
-is **unverified against a live account** and should be smoke-tested with a real key before
-being relied on in production (see DECISIONS.md and the plan's Global Constraints).
+**OpenAI `gpt-image-1`** (`src/providers/openai_provider.py`), behind the `ImageProvider`
+protocol (`src/providers/base.py`), selected via the shared `src/providers/factory.py` used
+by the CLI, FastAPI app, and Lambda handler alike. Chosen over the initially-planned MiniMax
+backend because output quality was the priority for this small system, and `gpt-image-1` is
+OpenAI's current highest-quality image model with native multi-reference-image conditioning.
+
+For scenes with reference images (identity/prop refs resolved from the reference
+conditioning contract), it calls `client.images.edit(model="gpt-image-1", image=[...],
+prompt=...)`, passing the actual reference PNGs as input files — this is real
+reference-image conditioning, not just a text description of the character, which is a
+better match for the assignment's character-consistency goal than a prompt-only call. Pure
+location/establishing shots with no references fall back to `client.images.generate(...)`.
+Both paths request `quality="high"` and `size="1536x1024"`. `OPENAI_API_KEY` is reused for
+both the image provider and mem0's internal extraction step (see DECISIONS.md).
 
 ## Mock provider behavior
 
@@ -101,8 +109,9 @@ needed) in `tests/test_dynamo_repo.py`.
   it does not run CLIP/face-embedding similarity, OCR, or color-palette drift checks
   (listed as bonus checks in the assignment). Documented as a productionization item in
   DECISIONS.md.
-- **MiniMax `subject_reference` data-URI assumption is unverified** against a live
-  MiniMax account (see above).
-- **mem0's internal LLM uses OpenAI**, not MiniMax — mem0 doesn't have a native MiniMax
-  LLM provider (see DECISIONS.md). If `OPENAI_API_KEY` isn't set, `VisualMemoryAdapter`
-  falls back automatically to a local in-process store so the pipeline keeps working.
+- **`OpenAIImageProvider` is untested against a live account** — the SDK call shape
+  (`images.edit`/`images.generate` with `gpt-image-1`) was verified against OpenAI's
+  current docs, but no real paid-key run has been performed as part of this submission
+  (see DECISIONS.md).
+- If `OPENAI_API_KEY` isn't set, `VisualMemoryAdapter` falls back automatically to a local
+  in-process store so the pipeline keeps working without any keys at all.

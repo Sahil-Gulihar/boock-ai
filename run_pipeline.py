@@ -3,17 +3,7 @@ import argparse
 import json
 import uuid
 from src.graph.build_graph import run_job
-from src.providers.mock_provider import MockProvider
-
-
-def _build_provider(name: str):
-    if name == "mock":
-        return MockProvider()
-    if name == "minimax":
-        import os
-        from src.providers.minimax_provider import MiniMaxProvider
-        return MiniMaxProvider(api_key=os.environ["MINIMAX_API_KEY"], group_id=os.environ.get("MINIMAX_GROUP_ID"))
-    raise ValueError(f"Unknown provider: {name}")
+from src.providers.factory import build_provider
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,7 +11,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--external-reference-pack", required=True)
     parser.add_argument("--visual-bible", required=True)
     parser.add_argument("--scene-packets", required=True)
-    parser.add_argument("--provider", default="mock", choices=["mock", "minimax"])
+    parser.add_argument("--provider", default="mock", choices=["mock", "openai"])
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument("--job-id", default=None)
     args = parser.parse_args(argv)
@@ -36,7 +26,7 @@ def main(argv: list[str] | None = None) -> int:
         scene_packets_path=args.scene_packets,
         provider_name=args.provider,
         output_dir=args.output_dir,
-        provider=_build_provider(args.provider),
+        provider=build_provider(args.provider),
     )
 
     print(json.dumps({"job_id": job_id, "status": state.job_status, "output_dir": f"{args.output_dir}/{job_id}"}))

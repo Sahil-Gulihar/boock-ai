@@ -5,6 +5,9 @@ location inputs) into character-consistent scene renders, with typed reference c
 a reference lock-family manifest, QA/repair gating, DynamoDB persistence, and mem0-backed
 durable visual memory.
 
+**See [EXAMPLES.md](EXAMPLES.md) for real generated output** (OpenAI `gpt-image-1`),
+including a genuine consistency-drift finding on scene 2 worth reading.
+
 ## Setup
 
 ```bash
@@ -36,10 +39,18 @@ with `--provider mock --job-id sample_run`.
 FastAPI:
 
 ```bash
-uvicorn src.api.app:app --reload
+uvicorn src.api.app:app --reload --env-file .env
 # POST http://localhost:8000/v1/image-consistency/render
 # GET  http://localhost:8000/v1/image-consistency/jobs/{job_id}
 ```
+
+`--env-file .env` is required — uvicorn doesn't source `.env` on its own, unlike the CLI
+(which loads it automatically). **Port note:** uvicorn's default port (`8000`) collides
+with DynamoDB Local's port (`docker-compose.yml`, also `8000`) if both are running — pick
+one: run the API on another port (`--port 8080`) or remap DynamoDB Local's host port in
+`docker-compose.yml`. If a POST to `/v1/image-consistency/render` comes back with a
+`MissingAuthenticationToken` DynamoDB-shaped error, that's the tell — the request landed
+on DynamoDB Local instead of the API.
 
 ## How to run tests
 

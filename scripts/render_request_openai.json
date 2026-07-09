@@ -1,0 +1,9 @@
+{
+  "book_version_id": "boock_demo_visual_001",
+  "variant_id": "variant_cinematic_default",
+  "external_reference_pack_path": "provided_inputs/external_reference_pack.json",
+  "visual_bible_path": "provided_inputs/visual_bible.json",
+  "scene_packets_path": "provided_inputs/scene_packets.json",
+  "provider": "openai",
+  "output_dir": "outputs"
+}

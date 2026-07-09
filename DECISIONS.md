@@ -75,7 +75,7 @@ a second, entirely unused real-provider implementation around would just be dead
 
 ## How character consistency is enforced
 
-Three layers:
+Four layers:
 
 1. **Reference conditioning contract** (`src/graph/nodes.py::build_reference_conditioning_contract`):
    flat `external_reference_pack.json` entities become typed `TypedRef`s carrying
@@ -107,6 +107,22 @@ Three layers:
    through). This is one of the assignment's eight named minimum QA checks and was
    initially missed; `approval_state` was being set on every `TypedRef` but never read
    anywhere. Covered by `tests/test_required_refs_approved_check.py`.
+4. **Prompt grounding from the contract's own `preserve_facets`** (`select_generation_strategy`
+   `_grounded_prompt()`): the render prompt sent to the image provider is no longer just
+   `scene.prompt_intent` verbatim. A real `--provider openai` run surfaced this the hard
+   way — `gpt-image-1` rendered the `black_seal` prop (a fictional obsidian talisman, per
+   `visual_bible.json`) as a literal seal animal, because the prompt never told it
+   otherwise; the contract already *had* the correct facts
+   (`round_shape`/`black_obsidian_material`/`thin_blue_glow`/`engraved_rune`) sitting
+   unused on the `TypedRef`. `_grounded_prompt()` now appends a clause per required
+   character/prop built from those facets, and props specifically get an explicit
+   "inanimate object, not an animal" disambiguation, since an `entity_id` like
+   `black_seal` reads as a literal creature name to a model with no other signal. Verified
+   by re-running the identical scene against the real provider before and after — see
+   `EXAMPLES.md` for both outputs and the exact grounded prompt. Covered by
+   `tests/test_prompt_grounding.py`. This is a mitigation for *this specific* failure
+   mode (name-driven literal misreading), not a general drift guarantee — a real
+   embedding-based QA check (see "What to productionize next") is still the general fix.
 
 ## How memory is used
 

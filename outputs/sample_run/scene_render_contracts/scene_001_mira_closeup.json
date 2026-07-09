@@ -1,6 +1,6 @@
 {
   "scene_id": "scene_001_mira_closeup",
-  "prompt": "Mira stands under the broken arch in rain, realizing something is wrong. Her green cloak and brass clasp are clearly visible.",
+  "prompt": "Mira stands under the broken arch in rain, realizing something is wrong. Her green cloak and brass clasp are clearly visible. Mira must show: face_identity, hair_color, skin_tone, core_silhouette.",
   "negative_prompt": "plastic armor, anime style, celebrity likeness, inconsistent hair, extra fingers, different costume between scenes",
   "style_route": "grounded_mythic_cinematic",
   "required_character_refs": [
@@ -17,7 +17,7 @@
     "face_front_close"
   ],
   "provider": "mock",
-  "seed": 642349749,
+  "seed": 142846165,
   "safety_notes": [],
   "blocked": false,
   "block_reason": null,

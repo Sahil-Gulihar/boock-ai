@@ -6,7 +6,8 @@ a reference lock-family manifest, QA/repair gating, DynamoDB persistence, and me
 durable visual memory.
 
 **See [EXAMPLES.md](EXAMPLES.md) for real generated output** (OpenAI `gpt-image-1`),
-including a genuine consistency-drift finding on scene 2 worth reading.
+including a genuine bug found in scene 2 (a prop misread as an animal), its root cause,
+and the fix — worth reading.
 
 ## Setup
 
@@ -154,8 +155,12 @@ needed) in `tests/test_dynamo_repo.py`.
   (same-run and cross-run drift), artifact/dimension validity, and provider metadata — it
   does not run CLIP/face-embedding similarity, OCR, or color-palette drift checks (listed
   as bonus checks in the assignment). Documented as a productionization item in
-  DECISIONS.md. `EXAMPLES.md` shows a real case (scene 2's prop drifting into a literal
-  animal) that an embedding-based check would have caught and this rule-based QA cannot.
+  DECISIONS.md. `EXAMPLES.md` walks through a real instance this rule-based QA missed
+  (scene 2's `black_seal` prop rendered as a literal animal, root-caused to the render
+  prompt discarding the contract's own `preserve_facets`, and fixed at the prompt-grounding
+  level) — but prompt grounding is a mitigation for *this* failure mode, not a general
+  guarantee; an embedding-based check would still catch drift that grounding text doesn't
+  prevent, and remains a real gap.
 - **Family-drift detection assumes every drift is unwanted.** If an entity is legitimately
   re-approved under a new reference pack on purpose, the current design still blocks it as
   drift (no re-approval/supersede workflow exists yet — see DECISIONS.md).

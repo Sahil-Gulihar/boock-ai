@@ -121,6 +121,47 @@ def _prior_approved_family_ids(entity_id: str, memory_facts: dict[str, list[str]
     }
 
 
+def _grounding_clause(entity_id: str, entity_type: str, contract) -> str | None:
+    """Turns the reference conditioning contract's own preserve_facets into a
+    plain-language clause appended to the render prompt.
+
+    Without this, the prompt sent to the image provider was scene.prompt_intent
+    verbatim -- the rich, structured preserve_facets already collected on every
+    TypedRef never actually reached generation. That's what let 'black_seal'
+    (a fictional obsidian talisman, per visual_bible.json) get rendered as a
+    literal seal animal in an early real-provider run even though the correct
+    facts (round_shape, black_obsidian_material, thin_blue_glow, engraved_rune)
+    were sitting unused in the contract the whole time. Props get an explicit
+    "not an animal" disambiguation since entity names like 'black_seal' or
+    'black_seal_ref' otherwise read as a literal creature name to a model with
+    no other signal.
+    """
+    refs = contract.refs_for_entity(entity_id)
+    if not refs:
+        return None
+    display_name = refs[0].display_name
+    facets = ", ".join(refs[0].preserve_facets)
+    if entity_type == "prop":
+        return (
+            f"{display_name} is an inanimate object/prop, not an animal or living "
+            f"creature -- it must show: {facets}."
+        )
+    return f"{display_name} must show: {facets}."
+
+
+def _grounded_prompt(scene, contract) -> str:
+    clauses = [scene.prompt_intent]
+    for entity_id in scene.characters:
+        clause = _grounding_clause(entity_id, "character", contract)
+        if clause:
+            clauses.append(clause)
+    for prop_id in scene.props:
+        clause = _grounding_clause(prop_id, "prop", contract)
+        if clause:
+            clauses.append(clause)
+    return " ".join(clauses)
+
+
 def select_generation_strategy(state: GraphState) -> GraphState:
     contract = state.reference_conditioning_contract
     contracts: dict[str, SceneRenderContract] = {}
@@ -170,7 +211,7 @@ def select_generation_strategy(state: GraphState) -> GraphState:
 
         contracts[scene.scene_id] = SceneRenderContract(
             scene_id=scene.scene_id,
-            prompt=scene.prompt_intent,
+            prompt=_grounded_prompt(scene, contract),
             negative_prompt=", ".join(state.visual_bible.style.negative_style),
             style_route=state.visual_bible.style.style_route,
             required_character_refs=scene.characters,

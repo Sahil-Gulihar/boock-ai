@@ -1,6 +1,6 @@
 {
   "scene_id": "scene_002_two_shot",
-  "prompt": "Mira confronts Arin in the ruined watchtower. Arin hides the black seal in his hand. Rain reflects the blue glow on wet stone.",
+  "prompt": "Mira confronts Arin in the ruined watchtower. Arin hides the black seal in his hand. Rain reflects the blue glow on wet stone. Mira must show: face_identity, hair_color, skin_tone, core_silhouette. Arin must show: face_identity, hair_shape, scar_over_right_brow, guard_leather_silhouette. Black Seal is an inanimate object/prop, not an animal or living creature -- it must show: round_shape, black_obsidian_material, thin_blue_glow, engraved_rune.",
   "negative_prompt": "plastic armor, anime style, celebrity likeness, inconsistent hair, extra fingers, different costume between scenes",
   "style_route": "grounded_mythic_cinematic",
   "required_character_refs": [
@@ -23,7 +23,7 @@
     "prop_detail"
   ],
   "provider": "mock",
-  "seed": 1975557280,
+  "seed": 1158417213,
   "safety_notes": [],
   "blocked": false,
   "block_reason": null,

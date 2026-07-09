@@ -1,0 +1,18 @@
+{
+  "job_id": "sample_run",
+  "book_version_id": "boock_demo_visual_001",
+  "variant_id": "variant_cinematic_default",
+  "status": "approved",
+  "created_at": "1783561730",
+  "artifacts": {
+    "reference_conditioning_contract": "sample_run/reference_conditioning_contract.json",
+    "reference_lock_family_manifest": "sample_run/reference_lock_family_manifest.json",
+    "scene_lock_consistency_report": "sample_run/scene_lock_consistency_report.json",
+    "repair_ticket_manifest": "sample_run/repair_ticket_manifest.json",
+    "scene_render_contract_scene_001_mira_closeup": "sample_run/scene_render_contracts/scene_001_mira_closeup.json",
+    "image_scene_001_mira_closeup": "sample_run/images/scene_001_mira_closeup.png",
+    "scene_render_contract_scene_002_two_shot": "sample_run/scene_render_contracts/scene_002_two_shot.json",
+    "image_scene_002_two_shot": "sample_run/images/scene_002_two_shot.png"
+  },
+  "qa_verdict": "approved"
+}

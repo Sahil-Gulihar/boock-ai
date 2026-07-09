@@ -1,0 +1,66 @@
+{
+  "job_id": "sample_run",
+  "scene_results": [
+    {
+      "scene_id": "scene_001_mira_closeup",
+      "checks": [
+        {
+          "check_name": "required_characters_present",
+          "passed": true,
+          "severity": "info",
+          "message": "all required character refs found"
+        },
+        {
+          "check_name": "required_props_present",
+          "passed": true,
+          "severity": "info",
+          "message": "all required prop refs found"
+        },
+        {
+          "check_name": "scene_image_exists_and_valid_dimensions",
+          "passed": true,
+          "severity": "info",
+          "message": "image rendered with valid dimensions"
+        },
+        {
+          "check_name": "provider_metadata_recorded",
+          "passed": true,
+          "severity": "info",
+          "message": "provider metadata present"
+        }
+      ],
+      "verdict": "approved"
+    },
+    {
+      "scene_id": "scene_002_two_shot",
+      "checks": [
+        {
+          "check_name": "required_characters_present",
+          "passed": true,
+          "severity": "info",
+          "message": "all required character refs found"
+        },
+        {
+          "check_name": "required_props_present",
+          "passed": true,
+          "severity": "info",
+          "message": "all required prop refs found"
+        },
+        {
+          "check_name": "scene_image_exists_and_valid_dimensions",
+          "passed": true,
+          "severity": "info",
+          "message": "image rendered with valid dimensions"
+        },
+        {
+          "check_name": "provider_metadata_recorded",
+          "passed": true,
+          "severity": "info",
+          "message": "provider metadata present"
+        }
+      ],
+      "verdict": "approved"
+    }
+  ],
+  "overall_verdict": "approved"
+}

@@ -1,0 +1,51 @@
+{
+  "families": [
+    {
+      "family_id": "lockfam_character_mira_v001",
+      "entity_type": "character",
+      "entity_id": "mira",
+      "display_name": "Mira",
+      "required_views": [
+        "face_front_close",
+        "fullbody_front",
+        "fullbody_three_quarter"
+      ],
+      "available_views": [],
+      "approval_state": "qa_pending",
+      "source_external_ref_ids": [
+        "mira_face_ref"
+      ]
+    },
+    {
+      "family_id": "lockfam_character_arin_v001",
+      "entity_type": "character",
+      "entity_id": "arin",
+      "display_name": "Arin",
+      "required_views": [
+        "face_front_close",
+        "fullbody_front",
+        "fullbody_three_quarter"
+      ],
+      "available_views": [],
+      "approval_state": "qa_pending",
+      "source_external_ref_ids": [
+        "arin_face_ref"
+      ]
+    },
+    {
+      "family_id": "lockfam_prop_black_seal_v001",
+      "entity_type": "prop",
+      "entity_id": "black_seal",
+      "display_name": "Black Seal",
+      "required_views": [
+        "prop_in_hand",
+        "prop_detail"
+      ],
+      "available_views": [],
+      "approval_state": "qa_pending",
+      "source_external_ref_ids": [
+        "black_seal_ref"
+      ]
+    }
+  ]
+}

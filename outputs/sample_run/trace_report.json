@@ -1,0 +1,17 @@
+{
+  "job_id": "sample_run",
+  "nodes_executed": [
+    "ingest_inputs",
+    "retrieve_visual_memory",
+    "build_reference_conditioning_contract",
+    "build_reference_lock_family_manifest",
+    "select_generation_strategy",
+    "render_scene_images",
+    "validate_scene_consistency",
+    "decide_pass_repair_or_block",
+    "persist_job_state",
+    "publish_output_manifest"
+  ],
+  "errors": [],
+  "final_status": "approved"
+}

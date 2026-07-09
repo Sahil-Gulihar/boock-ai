@@ -2,13 +2,37 @@ from __future__ import annotations
 import os
 
 
+class _LocalFallbackMemoryClient:
+    """Same add()/search() shape as mem0's client, backed by an in-process dict.
+
+    Used automatically when OPENAI_API_KEY isn't set, since mem0's OpenAI-backed
+    LLM provider raises at construction time (not just at call time) without one.
+    This keeps the CLI/API/pytest runnable with zero external API keys, per the
+    assignment's hard rule, while still using the real mem0 SDK whenever a key
+    is configured (e.g. for the real sample run).
+    """
+
+    def __init__(self):
+        self._store: dict[str, list[str]] = {}
+
+    def add(self, messages, user_id, infer=True):
+        self._store.setdefault(user_id, []).append(messages)
+
+    def search(self, query, user_id, limit=10):
+        facts = self._store.get(user_id, [])
+        return {"results": [{"memory": m} for m in facts]}
+
+
 def _build_default_client():
+    if not os.environ.get("OPENAI_API_KEY"):
+        return _LocalFallbackMemoryClient()
+
     from mem0 import Memory
 
     config = {
         "llm": {
             "provider": "openai",
-            "config": {"model": "gpt-4o-mini", "api_key": os.environ.get("OPENAI_API_KEY", "")},
+            "config": {"model": "gpt-4o-mini", "api_key": os.environ["OPENAI_API_KEY"]},
         },
         "vector_store": {
             "provider": "chroma",
